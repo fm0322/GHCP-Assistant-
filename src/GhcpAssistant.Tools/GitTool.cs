@@ -20,31 +20,32 @@ public sealed class GitTool : IAssistantTool
     {
         var action = parameters.GetProperty("action").GetString()!.ToLowerInvariant();
 
-        var args = action switch
+        string[] args = action switch
         {
-            "status" => "status --short",
-            "diff" => "diff",
-            "log" => "log --oneline -20",
-            "commit" => $"commit -m \"{parameters.GetProperty("message").GetString()}\"",
+            "status" => ["status", "--short"],
+            "diff" => ["diff"],
+            "log" => ["log", "--oneline", "-20"],
+            "commit" => ["commit", "-m", parameters.GetProperty("message").GetString()!],
             _ => throw new ArgumentException($"Unknown git action '{action}'.")
         };
 
         return await RunGitAsync(args, ct);
     }
 
-    private async Task<string> RunGitAsync(string arguments, CancellationToken ct)
+    private async Task<string> RunGitAsync(string[] arguments, CancellationToken ct)
     {
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
             FileName = "git",
-            Arguments = arguments,
             WorkingDirectory = _workingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        foreach (var arg in arguments)
+            process.StartInfo.ArgumentList.Add(arg);
 
         process.Start();
         var stdout = await process.StandardOutput.ReadToEndAsync(ct);
