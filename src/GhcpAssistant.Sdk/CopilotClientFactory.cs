@@ -3,7 +3,8 @@ using GhcpAssistant.Core.Tools;
 
 namespace GhcpAssistant.Sdk;
 
-// Replace StubCopilotClientFactory with a real implementation when GitHub.Copilot.SDK becomes available on NuGet.
+// Production implementation: CopilotSdkClientFactory (see CopilotSdkClientFactory.cs).
+// StubCopilotClientFactory is also available for testing and offline use.
 
 /// <summary>Factory that creates a Copilot client wrapper.</summary>
 public interface ICopilotClientFactory

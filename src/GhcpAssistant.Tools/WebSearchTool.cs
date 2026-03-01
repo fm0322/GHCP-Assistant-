@@ -20,10 +20,21 @@ public sealed class WebSearchTool : IAssistantTool
     {
         var query = parameters.GetProperty("query").GetString()!;
 
-        var url = $"https://api.duckduckgo.com/?q={Uri.EscapeDataString(query)}&format=json&no_html=1&skip_disambig=1";
-        var response = await _httpClient.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(query) || query.Length > 500)
+            return "Invalid query. Please provide a non-empty query of 500 characters or fewer.";
+
+        string json;
+        try
+        {
+            var url = $"https://api.duckduckgo.com/?q={Uri.EscapeDataString(query)}&format=json&no_html=1&skip_disambig=1";
+            var response = await _httpClient.GetAsync(url, ct);
+            response.EnsureSuccessStatusCode();
+            json = await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            return $"Web search failed for \"{query}\": {ex.Message}";
+        }
 
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
