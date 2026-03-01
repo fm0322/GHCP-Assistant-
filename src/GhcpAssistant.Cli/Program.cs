@@ -34,7 +34,7 @@ builder.Services.AddSingleton(sp =>
         registry.Register(new HomeAssistantTool(new HttpClient(), haBaseUrl, haAccessToken));
     return registry;
 });
-builder.Services.AddSingleton<SessionManager>();
+builder.Services.AddScoped<SessionManager>();
 
 // Register persistent conversation history (SQLite via EF Core)
 var connectionString = builder.Configuration.GetConnectionString("AssistantDb")
@@ -45,28 +45,14 @@ builder.Services.AddScoped<IConversationHistoryService, SqliteConversationHistor
 
 var host = builder.Build();
 
-// Ensure the database is created
+// Ensure the database is created and run the assistant
+Console.WriteLine("GHCP Assistant started. Type 'exit' to quit.\n");
+
 using (var scope = host.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AssistantDbContext>();
     await db.Database.EnsureCreatedAsync();
+
+    var sessionManager = scope.ServiceProvider.GetRequiredService<SessionManager>();
+    await sessionManager.RunAsync();
 }
-
-// Run the assistant
-Console.WriteLine("GHCP Assistant started. Type 'exit' to quit.\n");
-
-var sessionManager = host.Services.GetRequiredService<SessionManager>();
-await sessionManager.RunAsync();
-var inputChannel = host.Services.GetRequiredService<IInputChannel>();
-var toolRegistry = host.Services.GetRequiredService<ToolRegistry>();
-var options = host.Services.GetRequiredService<SessionOptions>();
-
-// Note: CopilotClientFactory is not yet implemented with the real SDK.
-// For now, print a message. Replace with SessionManager.RunAsync() once Phase 4 SDK integration is complete.
-Console.WriteLine("⚠ CopilotClient integration pending. Tools are registered and ready:");
-foreach (var tool in toolRegistry.GetRegisteredTools())
-{
-    Console.WriteLine($"  • {tool.Name}: {tool.Description}");
-}
-Console.WriteLine("\nConversation history is persisted to SQLite.");
-Console.WriteLine("Waiting for GitHub.Copilot.SDK availability to enable full agent loop.");
