@@ -39,7 +39,7 @@ public sealed class AssistantConfigService : IAssistantConfigService
         {
             _config = updatedConfig;
             _config.UpdatedAt = DateTime.UtcNow;
-            _config.UpdatedByRole = nameof(UserRole.Humaniser);
+            _config.UpdatedByRole = callerRole.ToString();
         }
 
         return Task.FromResult(_config);

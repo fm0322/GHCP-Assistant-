@@ -18,6 +18,8 @@ public interface IToolDiscoveryService
 
     /// <summary>
     /// Register a tool type so it can be discovered by the assistant.
+    /// If a tool with the same name is already registered, the call is silently ignored
+    /// and the original registration is retained.
     /// </summary>
     void RegisterDiscoverableTool(string name, string description, string toolTypeName);
 }
