@@ -3,7 +3,7 @@ using GhcpAssistant.Core.Tools;
 
 namespace GhcpAssistant.Sdk;
 
-// TODO: Replace stub implementations when GitHub.Copilot.SDK becomes available on NuGet.
+// Replace StubCopilotClientFactory with a real implementation when GitHub.Copilot.SDK becomes available on NuGet.
 
 /// <summary>Factory that creates a Copilot client wrapper.</summary>
 public interface ICopilotClientFactory

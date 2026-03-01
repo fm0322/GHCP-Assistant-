@@ -18,6 +18,7 @@ var haAccessToken = builder.Configuration["HomeAssistant:AccessToken"] ?? "";
 // Register services
 builder.Services.AddSingleton(sessionOptions);
 builder.Services.AddSingleton<IInputChannel, ConsoleInputChannel>();
+builder.Services.AddSingleton<ICopilotClientFactory, StubCopilotClientFactory>();
 builder.Services.AddSingleton(sp =>
 {
     var registry = new ToolRegistry();
@@ -30,21 +31,12 @@ builder.Services.AddSingleton(sp =>
         registry.Register(new HomeAssistantTool(new HttpClient(), haBaseUrl, haAccessToken));
     return registry;
 });
+builder.Services.AddSingleton<SessionManager>();
 
 var host = builder.Build();
 
 // Run the assistant
 Console.WriteLine("GHCP Assistant started. Type 'exit' to quit.\n");
 
-var inputChannel = host.Services.GetRequiredService<IInputChannel>();
-var toolRegistry = host.Services.GetRequiredService<ToolRegistry>();
-var options = host.Services.GetRequiredService<SessionOptions>();
-
-// Note: CopilotClientFactory is not yet implemented with the real SDK.
-// For now, print a message. Replace with SessionManager.RunAsync() once Phase 4 SDK integration is complete.
-Console.WriteLine("⚠ CopilotClient integration pending. Tools are registered and ready:");
-foreach (var tool in toolRegistry.GetRegisteredTools())
-{
-    Console.WriteLine($"  • {tool.Name}: {tool.Description}");
-}
-Console.WriteLine("\nWaiting for GitHub.Copilot.SDK availability to enable full agent loop.");
+var sessionManager = host.Services.GetRequiredService<SessionManager>();
+await sessionManager.RunAsync();
