@@ -86,8 +86,10 @@ internal sealed class SdkSessionWrapper : ICopilotSessionWrapper
                     channel.Writer.TryComplete();
                     break;
                 case SessionErrorEvent error:
-                    channel.Writer.TryComplete(
-                        new InvalidOperationException(error.Data.Message));
+                    var errorEx = error.Data.Message.Contains("Authorization", StringComparison.OrdinalIgnoreCase)
+                        ? (Exception)new CopilotAuthorizationException(error.Data.Message)
+                        : new InvalidOperationException(error.Data.Message);
+                    channel.Writer.TryComplete(errorEx);
                     break;
             }
         });

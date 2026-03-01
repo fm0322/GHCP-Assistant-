@@ -79,5 +79,14 @@ using (var scope = host.Services.CreateScope())
     await db.Database.EnsureCreatedAsync();
 
     var sessionManager = scope.ServiceProvider.GetRequiredService<SessionManager>();
-    await sessionManager.RunAsync();
+    try
+    {
+        await sessionManager.RunAsync();
+    }
+    catch (CopilotAuthorizationException ex)
+    {
+        Console.Error.WriteLine($"\nAuthorization error: {ex.Message}");
+        Console.Error.WriteLine("Please run '/login' to authenticate with GitHub Copilot and try again.");
+        Environment.Exit(1);
+    }
 }
