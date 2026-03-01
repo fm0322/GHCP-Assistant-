@@ -22,7 +22,7 @@ dotnet test GhcpAssistant.sln
 | **file_system** | Read, write, or list files and directories within the workspace. Includes path-traversal protection. |
 | **shell** | Execute shell commands from a configurable allow-list with timeout support. |
 | **git** | Run git operations: status, diff, log, commit. |
-| **web_search** | Search the web and return a summary of results (stub — configure a search provider to enable). |
+| **web_search** | Search the web and return a summary of results via the DuckDuckGo Instant Answer API. |
 | **github** | Query the GitHub REST API: get repo info, list issues, list PRs. |
 | **home_assistant** | Interact with Home Assistant: get entity states, call services (e.g., turn on/off lights, locks, switches). Configure `HomeAssistant:BaseUrl` and `HomeAssistant:AccessToken` in `appsettings.json` to enable. |
 

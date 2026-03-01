@@ -21,6 +21,7 @@ var haAccessToken = builder.Configuration["HomeAssistant:AccessToken"] ?? "";
 // Register services
 builder.Services.AddSingleton(sessionOptions);
 builder.Services.AddSingleton<IInputChannel, ConsoleInputChannel>();
+builder.Services.AddSingleton<ICopilotClientFactory, CopilotSdkClientFactory>();
 builder.Services.AddSingleton(sp =>
 {
     var registry = new ToolRegistry();
@@ -33,6 +34,7 @@ builder.Services.AddSingleton(sp =>
         registry.Register(new HomeAssistantTool(new HttpClient(), haBaseUrl, haAccessToken));
     return registry;
 });
+builder.Services.AddSingleton<SessionManager>();
 
 // Register persistent conversation history (SQLite via EF Core)
 var connectionString = builder.Configuration.GetConnectionString("AssistantDb")
@@ -53,6 +55,8 @@ using (var scope = host.Services.CreateScope())
 // Run the assistant
 Console.WriteLine("GHCP Assistant started. Type 'exit' to quit.\n");
 
+var sessionManager = host.Services.GetRequiredService<SessionManager>();
+await sessionManager.RunAsync();
 var inputChannel = host.Services.GetRequiredService<IInputChannel>();
 var toolRegistry = host.Services.GetRequiredService<ToolRegistry>();
 var options = host.Services.GetRequiredService<SessionOptions>();

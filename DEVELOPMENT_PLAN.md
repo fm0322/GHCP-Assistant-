@@ -269,7 +269,7 @@ dotnet add src/GhcpAssistant.Sdk/ package GitHub.Copilot.SDK --prerelease
 dotnet add src/GhcpAssistant.Sdk/ package Microsoft.Extensions.AI --prerelease
 ```
 
-> **Note**: If the `GitHub.Copilot.SDK` package is not yet available on NuGet, create the classes with `// TODO: Replace stub` comments and use interface-based abstractions so the code compiles. The agent should check NuGet availability first and adapt accordingly.
+> **Note**: The `GitHub.Copilot.SDK` package (v0.1.29) is now available on NuGet and has been integrated via `CopilotSdkClientFactory`. A `StubCopilotClientFactory` is also provided for testing and offline use.
 
 ### Files to Create
 
@@ -640,7 +640,7 @@ public sealed class GitTool : IAssistantTool
 
 ### Goal
 
-Implement a `WebSearchTool` stub that returns search results. The initial implementation can use a simple HTTP call or return a placeholder response until a real search API key is configured.
+Implement a `WebSearchTool` that returns search results via the DuckDuckGo Instant Answer API. No API key is required.
 
 ### Files to Create
 
@@ -649,7 +649,7 @@ Implement a `WebSearchTool` stub that returns search results. The initial implem
 The tool must:
 
 - Accept JSON parameters: `{ "query": "..." }`
-- Make an HTTP GET request to a search API or return a structured placeholder.
+- Make an HTTP GET request to the DuckDuckGo Instant Answer API and parse the JSON response.
 - Return results as a text summary.
 
 ### Implementation Notes
@@ -676,11 +676,10 @@ public sealed class WebSearchTool : IAssistantTool
     {
         var query = parameters.GetProperty("query").GetString()!;
 
-        // TODO: Integrate a real search API (Bing, Google, Tavily, etc.)
-        // For now, return a placeholder indicating the feature is stubbed.
-        await Task.CompletedTask;
-        return $"[WebSearch stub] No search API configured. Query was: \"{query}\". " +
-               "Configure a search provider in appsettings.json to enable live results.";
+        var url = $"https://api.duckduckgo.com/?q={Uri.EscapeDataString(query)}&format=json&no_html=1&skip_disambig=1";
+        var response = await _httpClient.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+        // Parse JSON response and extract AbstractText, RelatedTopics, etc.
     }
 }
 ```
@@ -693,7 +692,7 @@ public sealed class WebSearchTool : IAssistantTool
 ### Acceptance Criteria
 
 - [ ] `dotnet build src/GhcpAssistant.Tools/` succeeds.
-- [ ] Tool compiles and returns a meaningful placeholder response.
+- [x] Tool compiles and returns real search results from DuckDuckGo.
 
 ---
 
@@ -917,18 +916,8 @@ var host = builder.Build();
 // Run the assistant
 Console.WriteLine("GHCP Assistant started. Type 'exit' to quit.\n");
 
-var inputChannel = host.Services.GetRequiredService<IInputChannel>();
-var toolRegistry = host.Services.GetRequiredService<ToolRegistry>();
-var options = host.Services.GetRequiredService<SessionOptions>();
-
-// Note: CopilotClientFactory is not yet implemented with the real SDK.
-// For now, print a message. Replace with SessionManager.RunAsync() once Phase 4 SDK integration is complete.
-Console.WriteLine("⚠ CopilotClient integration pending. Tools are registered and ready:");
-foreach (var tool in toolRegistry.GetRegisteredTools())
-{
-    Console.WriteLine($"  • {tool.Name}: {tool.Description}");
-}
-Console.WriteLine("\nWaiting for GitHub.Copilot.SDK availability to enable full agent loop.");
+var sessionManager = host.Services.GetRequiredService<SessionManager>();
+await sessionManager.RunAsync();
 ```
 
 ### Steps
@@ -999,7 +988,7 @@ Add unit tests for each tool class (`FileSystemTool`, `ShellTool`, `GitTool`, `W
 
 #### `tests/GhcpAssistant.Tools.Tests/WebSearchToolTests.cs`
 
-- Test that the stub returns a placeholder message containing the query.
+- Test that the tool returns search results containing the query.
 
 #### `tests/GhcpAssistant.Tools.Tests/GitHubToolTests.cs`
 
@@ -1058,7 +1047,7 @@ Final integration pass: ensure the full solution builds, all tests pass, and doc
    - Quick-start instructions.
    - Link to this development plan.
    - List of available tools.
-4. Review and close out any `// TODO` comments that can be addressed.
+4. Review and close out any remaining `// TODO` comments.
 5. Verify `dotnet run --project src/GhcpAssistant.Cli/` starts without errors.
 
 ### Acceptance Criteria
