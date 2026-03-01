@@ -71,15 +71,13 @@ public class WebSearchToolTests
     public async Task Execute_LimitsRelatedTopicsToFive()
     {
         var topics = string.Join(",", Enumerable.Range(1, 8)
-            .Select(i => $"""{{ "Text": "Topic {i}", "FirstURL": "https://example.com/{i}" }}"""));
-        var json = $$"""
-        {
-            "AbstractText": "",
-            "AbstractSource": "",
-            "AbstractURL": "",
-            "RelatedTopics": [{{topics}}]
-        }
-        """;
+            .Select(i => $"{{ \"Text\": \"Topic {i}\", \"FirstURL\": \"https://example.com/{i}\" }}"));
+        var json = $@"{{
+            ""AbstractText"": """",
+            ""AbstractSource"": """",
+            ""AbstractURL"": """",
+            ""RelatedTopics"": [{topics}]
+        }}";
         var handler = new FakeHandler(HttpStatusCode.OK, json);
         var tool = new WebSearchTool(new HttpClient(handler));
         var parameters = JsonDocument.Parse("""{"query":"many results"}""").RootElement;

@@ -18,7 +18,7 @@ var haAccessToken = builder.Configuration["HomeAssistant:AccessToken"] ?? "";
 // Register services
 builder.Services.AddSingleton(sessionOptions);
 builder.Services.AddSingleton<IInputChannel, ConsoleInputChannel>();
-builder.Services.AddSingleton<ICopilotClientFactory, StubCopilotClientFactory>();
+builder.Services.AddSingleton<ICopilotClientFactory, CopilotSdkClientFactory>();
 builder.Services.AddSingleton(sp =>
 {
     var registry = new ToolRegistry();
