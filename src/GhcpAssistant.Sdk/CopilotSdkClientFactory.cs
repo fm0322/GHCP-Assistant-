@@ -24,7 +24,7 @@ public sealed class CopilotSdkClientFactory : ICopilotClientFactory
     public async Task<ICopilotClientWrapper> CreateAsync(CancellationToken ct = default)
     {
         var client = new CopilotClient(_options);
-        await client.StartAsync();
+        await client.StartAsync(ct);
         return new SdkClientWrapper(client);
     }
 }
@@ -51,7 +51,7 @@ internal sealed class SdkClientWrapper : ICopilotClientWrapper
             Streaming = true,
             Tools = aiFunctions,
             OnPermissionRequest = PermissionHandler.ApproveAll
-        });
+        }, ct);
 
         return new SdkSessionWrapper(session);
     }
@@ -92,9 +92,17 @@ internal sealed class SdkSessionWrapper : ICopilotSessionWrapper
             }
         });
 
-        // Fire-and-forget: SendAndWaitAsync blocks until idle, while events
-        // stream into the channel for the caller to consume.
-        var sendTask = _session.SendAndWaitAsync(new MessageOptions { Prompt = message });
+        var sendTask = _session.SendAndWaitAsync(new MessageOptions { Prompt = message }, cancellationToken: ct);
+
+        // Propagate failures from SendAndWaitAsync to the channel so consumers
+        // are not left waiting indefinitely if the send itself faults.
+        _ = sendTask.ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+                channel.Writer.TryComplete(t.Exception!.InnerException ?? t.Exception);
+            else if (t.IsCanceled)
+                channel.Writer.TryComplete(new OperationCanceledException());
+        }, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
 
         await foreach (var evt in channel.Reader.ReadAllAsync(ct))
             yield return evt;
