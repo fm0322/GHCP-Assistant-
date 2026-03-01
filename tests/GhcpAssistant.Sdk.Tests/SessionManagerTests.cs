@@ -67,7 +67,7 @@ public class SessionManagerTests
             {
                 yield return msg;
             }
-            await Task.CompletedTask;
+            await Task.Yield();
         }
 
         public Task WriteResponseAsync(string chunk, CancellationToken ct = default)
@@ -100,7 +100,7 @@ public class SessionManagerTests
         {
             yield return evt;
         }
-        await Task.CompletedTask;
+        await Task.Yield();
     }
 
     #endregion
