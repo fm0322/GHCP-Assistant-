@@ -167,18 +167,21 @@ public interface IAssistantTool
 
 ---
 
-### 5. Persistence Layer (Conversation History)
+### 5. Persistence Layer (Conversation History & Task List)
 
-Conversation history is persisted to a local **SQLite** database via **Entity Framework Core**. This enables the assistant to retain multi-turn context across restarts and allows users to review past sessions.
+Conversation history and a persistent task list are stored in a local **SQLite** database via **Entity Framework Core**. This enables the assistant to retain multi-turn context across restarts, allows users to review past sessions, and provides a durable task list for tracking work items.
 
-**Entity models** (defined in `GhcpAssistant.Core.History`):
+**Entity models** (defined in `GhcpAssistant.Core.History` and `GhcpAssistant.Core.Tasks`):
 
 | Entity | Purpose |
 |---|---|
 | `ConversationSession` | A logical conversation with an ID, title, and timestamps |
 | `ConversationMessage` | A single message (user, assistant, or system) within a session |
+| `TaskItem` | A persistent task with title, description, priority, due date, and completion status |
 
-**Service interface** (`IConversationHistoryService`):
+**Service interfaces**:
+
+`IConversationHistoryService` — manages conversation sessions and messages:
 
 ```csharp
 public interface IConversationHistoryService
@@ -192,10 +195,29 @@ public interface IConversationHistoryService
 }
 ```
 
+`ITaskService` — manages persistent tasks with full CRUD operations:
+
+```csharp
+public interface ITaskService
+{
+    Task<TaskItem> CreateTaskAsync(string title, string? description = null,
+        TaskPriority priority = TaskPriority.Medium, DateTime? dueDate = null, CancellationToken ct = default);
+    Task<TaskItem?> GetTaskAsync(Guid taskId, CancellationToken ct = default);
+    Task<IReadOnlyList<TaskItem>> ListTasksAsync(bool? isCompleted = null, CancellationToken ct = default);
+    Task<TaskItem> UpdateTaskAsync(Guid taskId, string? title = null, string? description = null,
+        TaskPriority? priority = null, DateTime? dueDate = null, CancellationToken ct = default);
+    Task<TaskItem> CompleteTaskAsync(Guid taskId, CancellationToken ct = default);
+    Task<bool> DeleteTaskAsync(Guid taskId, CancellationToken ct = default);
+}
+```
+
+Tasks support three priority levels (`Low`, `Medium`, `High`) and are listed with incomplete items first, ordered by priority (high → low), then by due date and creation time.
+
 **Implementation** (`GhcpAssistant.Data`):
 
-- `AssistantDbContext` — EF Core `DbContext` with `Sessions` and `Messages` `DbSet`s
+- `AssistantDbContext` — EF Core `DbContext` with `Sessions`, `Messages`, and `Tasks` `DbSet`s
 - `SqliteConversationHistoryService` — implements `IConversationHistoryService` against SQLite
+- `SqliteTaskService` — implements `ITaskService` against SQLite
 
 The database is automatically created on first run via `EnsureCreatedAsync()`. The connection string is configurable in `appsettings.json`:
 
@@ -223,6 +245,9 @@ GHCP-Assistant/
 │   │   │   ├── ConversationSession.cs
 │   │   │   ├── ConversationMessage.cs
 │   │   │   └── IConversationHistoryService.cs
+│   │   ├── Tasks/
+│   │   │   ├── TaskItem.cs
+│   │   │   └── ITaskService.cs
 │   │   ├── Tools/
 │   │   │   └── IAssistantTool.cs
 │   │   └── Sessions/
@@ -237,7 +262,8 @@ GHCP-Assistant/
 │   │
 │   ├── GhcpAssistant.Data/                 # EF Core persistence (SQLite)
 │   │   ├── AssistantDbContext.cs
-│   │   └── SqliteConversationHistoryService.cs
+│   │   ├── SqliteConversationHistoryService.cs
+│   │   └── SqliteTaskService.cs
 │   │
 │   ├── GhcpAssistant.Tools/                # Built-in tool implementations
 │   │   ├── FileSystemTool.cs
@@ -393,6 +419,7 @@ dotnet test
 ## Future Roadmap
 
 - [x] Persistent conversation history (SQLite via EF Core)
+- [x] Persistent task list (SQLite via EF Core)
 - [ ] Plugin discovery from NuGet packages at runtime
 - [ ] Multi-model routing (select model per tool category)
 - [ ] Web UI front-end (Blazor) backed by `HttpInputChannel`

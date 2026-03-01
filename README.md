@@ -40,6 +40,30 @@ The database is created automatically on first run. Configure the connection str
 }
 ```
 
+## Persistent Task List
+
+GHCP Assistant includes a **persistent task list** backed by the same SQLite database. Tasks survive application restarts and provide a simple way to track work items, to-dos, and reminders.
+
+Each task supports the following properties:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| **Title** | `string` | Short name for the task (required) |
+| **Description** | `string?` | Optional longer description |
+| **Priority** | `TaskPriority` | `Low`, `Medium` (default), or `High` |
+| **DueDate** | `DateTime?` | Optional due date (UTC) |
+| **IsCompleted** | `bool` | Whether the task has been finished |
+
+The task list is managed through the `ITaskService` interface, which provides full CRUD operations:
+
+- **Create** — add a new task with a title, optional description, priority, and due date
+- **Read** — retrieve a single task by ID, or list all tasks with optional filtering by completion status
+- **Update** — modify a task's title, description, priority, or due date
+- **Complete** — mark a task as done
+- **Delete** — remove a task permanently
+
+Tasks are listed with incomplete items first, ordered by priority (high → low), then by due date and creation time. The service is registered via dependency injection and is available to any component in the application.
+
 ## Documentation
 
 - [Architecture Document](ARCHITECTURE.md) — system design, component breakdown, data flow, and extension guide.
