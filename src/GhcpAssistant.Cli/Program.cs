@@ -3,6 +3,7 @@ using GhcpAssistant.Core.Channels;
 using GhcpAssistant.Core.History;
 using GhcpAssistant.Core.Sessions;
 using GhcpAssistant.Core.Tasks;
+using GhcpAssistant.Core.Tools;
 using GhcpAssistant.Data;
 using GhcpAssistant.Sdk;
 using GhcpAssistant.Tools;
@@ -18,11 +19,33 @@ var sessionOptions = builder.Configuration.GetSection("Session").Get<SessionOpti
 var allowedCommands = builder.Configuration.GetSection("Shell:AllowedCommands").Get<string[]>() ?? ["dotnet", "git", "ls"];
 var haBaseUrl = builder.Configuration["HomeAssistant:BaseUrl"] ?? "";
 var haAccessToken = builder.Configuration["HomeAssistant:AccessToken"] ?? "";
+var autoApproveTools = builder.Configuration.GetValue<bool>("ToolDiscovery:AutoApproveTools");
 
 // Register services
 builder.Services.AddSingleton(sessionOptions);
 builder.Services.AddSingleton<IInputChannel, ConsoleInputChannel>();
 builder.Services.AddSingleton<ICopilotClientFactory, CopilotSdkClientFactory>();
+
+// Register assistant config service (controls auto-approve and other settings)
+var assistantConfig = new AssistantConfig { AutoApproveTools = autoApproveTools };
+builder.Services.AddSingleton<IAssistantConfigService>(new AssistantConfigService(assistantConfig));
+
+// Register tool approval and discovery services
+builder.Services.AddSingleton<IToolApprovalService, ToolApprovalService>();
+builder.Services.AddSingleton<IToolDiscoveryService>(sp =>
+{
+    var discovery = new ToolDiscoveryService();
+    // Register built-in tools as discoverable
+    discovery.RegisterDiscoverableTool("file_system", "Read, write, and list files and directories", typeof(FileSystemTool).FullName!);
+    discovery.RegisterDiscoverableTool("shell", "Execute shell commands in a sandboxed child process", typeof(ShellTool).FullName!);
+    discovery.RegisterDiscoverableTool("git", "Run common git operations (status, diff, log, commit)", typeof(GitTool).FullName!);
+    discovery.RegisterDiscoverableTool("web_search", "Perform a web search and return a summary", typeof(WebSearchTool).FullName!);
+    discovery.RegisterDiscoverableTool("github", "Query GitHub REST API (issues, PRs, repos)", typeof(GitHubTool).FullName!);
+    if (!string.IsNullOrWhiteSpace(haBaseUrl))
+        discovery.RegisterDiscoverableTool("home_assistant", "Interact with Home Assistant (entity states, service calls)", typeof(HomeAssistantTool).FullName!);
+    return discovery;
+});
+
 builder.Services.AddSingleton(sp =>
 {
     var registry = new ToolRegistry();
