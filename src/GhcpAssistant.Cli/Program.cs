@@ -1,8 +1,11 @@
 ﻿using GhcpAssistant.Channels;
 using GhcpAssistant.Core.Channels;
+using GhcpAssistant.Core.History;
 using GhcpAssistant.Core.Sessions;
+using GhcpAssistant.Data;
 using GhcpAssistant.Sdk;
 using GhcpAssistant.Tools;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,7 +30,21 @@ builder.Services.AddSingleton(sp =>
     return registry;
 });
 
+// Register persistent conversation history (SQLite via EF Core)
+var connectionString = builder.Configuration.GetConnectionString("AssistantDb")
+    ?? "Data Source=ghcpassistant.db";
+builder.Services.AddDbContext<AssistantDbContext>(options =>
+    options.UseSqlite(connectionString));
+builder.Services.AddScoped<IConversationHistoryService, SqliteConversationHistoryService>();
+
 var host = builder.Build();
+
+// Ensure the database is created
+using (var scope = host.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AssistantDbContext>();
+    await db.Database.EnsureCreatedAsync();
+}
 
 // Run the assistant
 Console.WriteLine("GHCP Assistant started. Type 'exit' to quit.\n");
@@ -43,4 +60,5 @@ foreach (var tool in toolRegistry.GetRegisteredTools())
 {
     Console.WriteLine($"  • {tool.Name}: {tool.Description}");
 }
-Console.WriteLine("\nWaiting for GitHub.Copilot.SDK availability to enable full agent loop.");
+Console.WriteLine("\nConversation history is persisted to SQLite.");
+Console.WriteLine("Waiting for GitHub.Copilot.SDK availability to enable full agent loop.");
