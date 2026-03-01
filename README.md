@@ -25,6 +25,20 @@ dotnet test GhcpAssistant.sln
 | **web_search** | Search the web and return a summary of results (stub — configure a search provider to enable). |
 | **github** | Query the GitHub REST API: get repo info, list issues, list PRs. |
 
+## Persistent Conversation History
+
+Conversation history is automatically persisted to a local **SQLite** database via **EF Core**. This enables the assistant to retain multi-turn context across restarts and allows users to review past sessions.
+
+The database is created automatically on first run. Configure the connection string in `appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "AssistantDb": "Data Source=ghcpassistant.db"
+  }
+}
+```
+
 ## Documentation
 
 - [Architecture Document](ARCHITECTURE.md) — system design, component breakdown, data flow, and extension guide.
