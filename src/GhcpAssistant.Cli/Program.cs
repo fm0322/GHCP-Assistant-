@@ -11,8 +11,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+if (!builder.Environment.IsDevelopment())
+    builder.Logging.ClearProviders();
 
 // Bind configuration
 var sessionOptions = builder.Configuration.GetSection("Session").Get<SessionOptions>() ?? new SessionOptions();
