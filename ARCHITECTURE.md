@@ -81,7 +81,7 @@ The central coordinator — equivalent to clawbot's *Gateway Server*. It:
 
 ```csharp
 public sealed class SessionManager(
-    CopilotClient copilotClient,
+    ICopilotClientFactory clientFactory,
     IInputChannel inputChannel,
     ToolRegistry toolRegistry,
     SessionOptions options)
@@ -183,7 +183,9 @@ GHCP-Assistant/
 │   ├── GhcpAssistant.Sdk/                  # CopilotClient wrapper + SessionManager
 │   │   ├── SessionManager.cs
 │   │   ├── ToolRegistry.cs
-│   │   └── CopilotClientFactory.cs
+│   │   ├── CopilotClientFactory.cs
+│   │   ├── CopilotSdkClientFactory.cs
+│   │   └── StubCopilotClientFactory.cs
 │   │
 │   ├── GhcpAssistant.Tools/                # Built-in tool implementations
 │   │   ├── FileSystemTool.cs
@@ -215,12 +217,10 @@ GHCP-Assistant/
 | Technology | Version | Purpose |
 |---|---|---|
 | .NET | 10 | Runtime and base class libraries |
-| `GitHub.Copilot.SDK` | 0.1.x (preview) | Copilot agent sessions and streaming |
-| `Microsoft.Extensions.AI` | Latest | `AIFunction`, `AIFunctionFactory`, tool calling |
-| `Microsoft.Agents.AI.GitHub.Copilot` | Preview | Optional Microsoft Agent Framework bridge |
-| `Microsoft.Extensions.Hosting` | .NET 10 | Dependency injection, configuration, lifetime |
-| `Spectre.Console` | Latest | Rich terminal UI (markdown rendering, spinners) |
-| `Octokit` | Latest | GitHub REST API client (GitHubTool) |
+| `GitHub.Copilot.SDK` | 0.1.29 | Copilot agent sessions and streaming |
+| `Microsoft.Extensions.AI` | 10.3.0 | `AIFunction`, `AIFunctionFactory`, tool calling |
+| `Microsoft.Extensions.Hosting` | 10.0.3 | Dependency injection, configuration, lifetime |
+| `Octokit` | 14.0.0 | GitHub REST API client (GitHubTool) |
 | `System.Text.Json` | .NET 10 | JSON serialization of tool parameters |
 
 ---
@@ -310,8 +310,7 @@ No other changes are needed — the SDK advertises the function to the model aut
 | Requirement | Details |
 |---|---|
 | .NET 10 SDK | [https://dot.net](https://dot.net) |
-| GitHub CLI (`gh`) | [https://cli.github.com](https://cli.github.com) — must be authenticated (`gh auth login`) |
-| GitHub Copilot subscription | Individual, Business, or Enterprise |
+| GitHub Copilot subscription | Individual, Business, or Enterprise — must be authenticated via `gh auth login` |
 
 ### Build
 
