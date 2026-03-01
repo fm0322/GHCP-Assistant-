@@ -137,11 +137,15 @@ Equivalent to clawbot's *Tooling / Lambda Execution Layer*. Tools are regular C#
 ```csharp
 public sealed class ToolRegistry
 {
-    public void Register<T>() where T : IAssistantTool;
-    public IReadOnlyList<AIFunction> GetRegisteredFunctions();
+    public void Register(IAssistantTool tool);
+    public bool TryRegisterDiscovered(IAssistantTool tool, ToolApprovalStatus approvalStatus);
+    public bool IsRegistered(string toolName);
+    public IReadOnlyList<IAssistantTool> GetRegisteredTools();
     public Task<string> InvokeAsync(string toolName, JsonElement args, CancellationToken ct);
 }
 ```
+
+`TryRegisterDiscovered` only registers a tool if its `approvalStatus` is `Approved`, ensuring dynamically discovered tools cannot execute until the user (or auto-approve config) authorises them.
 
 **Built-in tools (initial set)**
 
@@ -233,6 +237,79 @@ The `SessionManager` accepts an optional `IConversationHistoryService` — when 
 
 ---
 
+### 6. Tool Discovery, Approval & Configuration
+
+The assistant can autonomously discover tools it needs to perform requested actions, configure them for itself, and — subject to user authorisation — register them for use.
+
+#### Models
+
+| Type | Purpose |
+|---|---|
+| `ToolApprovalStatus` | Enum: `Pending`, `Approved`, `Rejected` |
+| `UserRole` | Enum: `User` (standard), `Humaniser` (admin — the only role allowed to edit global config) |
+| `ToolConfiguration` | Represents a discovered tool — tracks name, description, type name, approval status, and timestamps |
+| `AssistantConfig` | System-wide configuration (e.g. `AutoApproveTools`); records who last updated it |
+
+#### Service interfaces
+
+`IToolDiscoveryService` — discovers tools the assistant can use:
+
+```csharp
+public interface IToolDiscoveryService
+{
+    Task<IReadOnlyList<ToolConfiguration>> DiscoverToolsAsync(string query, CancellationToken ct = default);
+    Task<IReadOnlyList<ToolConfiguration>> GetAvailableToolsAsync(CancellationToken ct = default);
+    void RegisterDiscoverableTool(string name, string description, string toolTypeName);
+}
+```
+
+`IToolApprovalService` — manages the approval workflow for discovered tools:
+
+```csharp
+public interface IToolApprovalService
+{
+    Task<ToolConfiguration> RequestApprovalAsync(string name, string description, string toolTypeName, CancellationToken ct = default);
+    Task<ToolConfiguration> ApproveToolAsync(Guid toolId, CancellationToken ct = default);
+    Task<ToolConfiguration> RejectToolAsync(Guid toolId, CancellationToken ct = default);
+    Task<IReadOnlyList<ToolConfiguration>> GetPendingApprovalsAsync(CancellationToken ct = default);
+    Task<ToolApprovalStatus> GetToolStatusAsync(Guid toolId, CancellationToken ct = default);
+}
+```
+
+`IAssistantConfigService` — manages system-wide configuration with role-based access control:
+
+```csharp
+public interface IAssistantConfigService
+{
+    Task<AssistantConfig> GetConfigAsync(CancellationToken ct = default);
+    Task<AssistantConfig> UpdateConfigAsync(UserRole callerRole, AssistantConfig updatedConfig, CancellationToken ct = default);
+}
+```
+
+Calling `UpdateConfigAsync` with any role other than `Humaniser` throws `UnauthorizedAccessException`.
+
+#### Implementations (`GhcpAssistant.Sdk`)
+
+| Class | Description |
+|---|---|
+| `ToolDiscoveryService` | Maintains a catalog of discoverable tool types; matches by keyword in name or description |
+| `ToolApprovalService` | Tracks approval status per tool; auto-approves when `AssistantConfig.AutoApproveTools` is `true` |
+| `AssistantConfigService` | Thread-safe, in-memory config store; enforces Humaniser-only write access |
+
+#### Configuration (`appsettings.json`)
+
+```json
+{
+  "ToolDiscovery": {
+    "AutoApproveTools": false
+  }
+}
+```
+
+When `AutoApproveTools` is `false` (the default), discovered tools remain in `Pending` status until the user explicitly authorises them. Set to `true` to allow all discovered tools to be registered immediately.
+
+---
+
 ## Project Structure
 
 ```
@@ -249,13 +326,23 @@ GHCP-Assistant/
 │   │   │   ├── TaskItem.cs
 │   │   │   └── ITaskService.cs
 │   │   ├── Tools/
-│   │   │   └── IAssistantTool.cs
+│   │   │   ├── IAssistantTool.cs
+│   │   │   ├── ToolApprovalStatus.cs
+│   │   │   ├── UserRole.cs
+│   │   │   ├── ToolConfiguration.cs
+│   │   │   ├── AssistantConfig.cs
+│   │   │   ├── IToolDiscoveryService.cs
+│   │   │   ├── IToolApprovalService.cs
+│   │   │   └── IAssistantConfigService.cs
 │   │   └── Sessions/
 │   │       └── SessionOptions.cs
 │   │
 │   ├── GhcpAssistant.Sdk/                  # CopilotClient wrapper + SessionManager
 │   │   ├── SessionManager.cs
 │   │   ├── ToolRegistry.cs
+│   │   ├── ToolDiscoveryService.cs
+│   │   ├── ToolApprovalService.cs
+│   │   ├── AssistantConfigService.cs
 │   │   ├── CopilotClientFactory.cs
 │   │   ├── CopilotSdkClientFactory.cs
 │   │   └── StubCopilotClientFactory.cs
@@ -382,6 +469,8 @@ No other changes are needed — the SDK advertises the function to the model aut
 | Home Assistant access | `HomeAssistantTool` is only registered when a base URL is configured; long-lived access token should be stored in user secrets or environment variables |
 | Secrets in prompts | System prompt and user messages are never logged at `Information` level or above |
 | Conversation storage | Conversation history is stored locally in SQLite; no data is sent to external services |
+| Dynamic tool registration | Discovered tools must be approved (via `IToolApprovalService`) before they can be registered in `ToolRegistry`; unapproved tools are blocked by `TryRegisterDiscovered` |
+| Configuration access control | Only users with the `Humaniser` role can modify `AssistantConfig`; all other roles receive `UnauthorizedAccessException` |
 
 ---
 
@@ -420,6 +509,7 @@ dotnet test
 
 - [x] Persistent conversation history (SQLite via EF Core)
 - [x] Persistent task list (SQLite via EF Core)
+- [x] Tool discovery, approval workflow & role-based configuration
 - [ ] Plugin discovery from NuGet packages at runtime
 - [ ] Multi-model routing (select model per tool category)
 - [ ] Web UI front-end (Blazor) backed by `HttpInputChannel`

@@ -64,6 +64,45 @@ The task list is managed through the `ITaskService` interface, which provides fu
 
 Tasks are listed with incomplete items first, ordered by priority (high → low), then by due date and creation time. The service is registered via dependency injection and is available to any component in the application.
 
+## Tool Discovery & Approval
+
+The assistant can autonomously **discover tools** it needs to perform actions and configure them for itself. Discovered tools require **user authorisation** before they can be used, unless auto-approve is enabled.
+
+### How it works
+
+1. **Discovery** — The `IToolDiscoveryService` searches a catalog of available tool types by keyword, matching against tool names and descriptions.
+2. **Approval** — When a tool is discovered, `IToolApprovalService` creates a `ToolConfiguration` entry in `Pending` status. The user must explicitly approve it before the tool can be registered and invoked.
+3. **Registration** — Once approved, `ToolRegistry.TryRegisterDiscovered()` registers the tool. Unapproved tools are blocked.
+
+### Auto-approve override
+
+Set `ToolDiscovery:AutoApproveTools` to `true` in `appsettings.json` to skip the user-authorisation step and automatically approve all discovered tools:
+
+```json
+{
+  "ToolDiscovery": {
+    "AutoApproveTools": true
+  }
+}
+```
+
+By default this is `false`, requiring explicit approval for each new tool.
+
+## Configuration & Role-Based Access
+
+System-wide configuration is managed through the `IAssistantConfigService` interface. **Only users with the `Humaniser` role can edit the configuration.** Standard `User` role callers receive an `UnauthorizedAccessException`.
+
+| Role | Permissions |
+|------|-------------|
+| **Humaniser** | Read and write configuration (e.g., toggle `AutoApproveTools`) |
+| **User** | Read configuration only; can approve/reject individual tools |
+
+Example — updating config (Humaniser only):
+
+```csharp
+await configService.UpdateConfigAsync(UserRole.Humaniser, new AssistantConfig { AutoApproveTools = true });
+```
+
 ## Documentation
 
 - [Architecture Document](ARCHITECTURE.md) — system design, component breakdown, data flow, and extension guide.
