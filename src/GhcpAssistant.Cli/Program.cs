@@ -2,6 +2,7 @@
 using GhcpAssistant.Core.Channels;
 using GhcpAssistant.Core.History;
 using GhcpAssistant.Core.Sessions;
+using GhcpAssistant.Core.Tasks;
 using GhcpAssistant.Data;
 using GhcpAssistant.Sdk;
 using GhcpAssistant.Tools;
@@ -42,6 +43,7 @@ var connectionString = builder.Configuration.GetConnectionString("AssistantDb")
 builder.Services.AddDbContext<AssistantDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddScoped<IConversationHistoryService, SqliteConversationHistoryService>();
+builder.Services.AddScoped<ITaskService, SqliteTaskService>();
 
 var host = builder.Build();
 
