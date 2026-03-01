@@ -167,6 +167,50 @@ public interface IAssistantTool
 
 ---
 
+### 5. Persistence Layer (Conversation History)
+
+Conversation history is persisted to a local **SQLite** database via **Entity Framework Core**. This enables the assistant to retain multi-turn context across restarts and allows users to review past sessions.
+
+**Entity models** (defined in `GhcpAssistant.Core.History`):
+
+| Entity | Purpose |
+|---|---|
+| `ConversationSession` | A logical conversation with an ID, title, and timestamps |
+| `ConversationMessage` | A single message (user, assistant, or system) within a session |
+
+**Service interface** (`IConversationHistoryService`):
+
+```csharp
+public interface IConversationHistoryService
+{
+    Task<ConversationSession> CreateSessionAsync(string? title = null, CancellationToken ct = default);
+    Task<ConversationSession?> GetSessionAsync(Guid sessionId, CancellationToken ct = default);
+    Task<IReadOnlyList<ConversationSession>> ListSessionsAsync(CancellationToken ct = default);
+    Task<ConversationMessage> AddMessageAsync(Guid sessionId, MessageRole role, string content, CancellationToken ct = default);
+    Task<IReadOnlyList<ConversationMessage>> GetMessagesAsync(Guid sessionId, CancellationToken ct = default);
+    Task<bool> DeleteSessionAsync(Guid sessionId, CancellationToken ct = default);
+}
+```
+
+**Implementation** (`GhcpAssistant.Data`):
+
+- `AssistantDbContext` — EF Core `DbContext` with `Sessions` and `Messages` `DbSet`s
+- `SqliteConversationHistoryService` — implements `IConversationHistoryService` against SQLite
+
+The database is automatically created on first run via `EnsureCreatedAsync()`. The connection string is configurable in `appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "AssistantDb": "Data Source=ghcpassistant.db"
+  }
+}
+```
+
+The `SessionManager` accepts an optional `IConversationHistoryService` — when provided, it automatically persists user messages and assistant responses as the conversation progresses.
+
+---
+
 ## Project Structure
 
 ```
@@ -175,6 +219,10 @@ GHCP-Assistant/
 │   ├── GhcpAssistant.Core/                 # Domain models, interfaces
 │   │   ├── Channels/
 │   │   │   └── IInputChannel.cs
+│   │   ├── History/
+│   │   │   ├── ConversationSession.cs
+│   │   │   ├── ConversationMessage.cs
+│   │   │   └── IConversationHistoryService.cs
 │   │   ├── Tools/
 │   │   │   └── IAssistantTool.cs
 │   │   └── Sessions/
@@ -186,6 +234,10 @@ GHCP-Assistant/
 │   │   ├── CopilotClientFactory.cs
 │   │   ├── CopilotSdkClientFactory.cs
 │   │   └── StubCopilotClientFactory.cs
+│   │
+│   ├── GhcpAssistant.Data/                 # EF Core persistence (SQLite)
+│   │   ├── AssistantDbContext.cs
+│   │   └── SqliteConversationHistoryService.cs
 │   │
 │   ├── GhcpAssistant.Tools/                # Built-in tool implementations
 │   │   ├── FileSystemTool.cs
@@ -207,6 +259,7 @@ GHCP-Assistant/
 └── tests/
     ├── GhcpAssistant.Core.Tests/
     ├── GhcpAssistant.Sdk.Tests/
+    ├── GhcpAssistant.Data.Tests/
     └── GhcpAssistant.Tools.Tests/
 ```
 
@@ -221,6 +274,8 @@ GHCP-Assistant/
 | `Microsoft.Extensions.AI` | 10.3.0 | `AIFunction`, `AIFunctionFactory`, tool calling |
 | `Microsoft.Extensions.Hosting` | 10.0.3 | Dependency injection, configuration, lifetime |
 | `Octokit` | 14.0.0 | GitHub REST API client (GitHubTool) |
+| `Microsoft.Agents.AI.GitHub.Copilot` | Preview | Optional Microsoft Agent Framework bridge |
+| `Spectre.Console` | Latest | Rich terminal UI (markdown rendering, spinners) |
 | `System.Text.Json` | .NET 10 | JSON serialization of tool parameters |
 
 ---
@@ -300,6 +355,7 @@ No other changes are needed — the SDK advertises the function to the model aut
 | Tool invocation | Only tools explicitly registered in `ToolRegistry` can be called by the agent |
 | Home Assistant access | `HomeAssistantTool` is only registered when a base URL is configured; long-lived access token should be stored in user secrets or environment variables |
 | Secrets in prompts | System prompt and user messages are never logged at `Information` level or above |
+| Conversation storage | Conversation history is stored locally in SQLite; no data is sent to external services |
 
 ---
 
@@ -336,7 +392,7 @@ dotnet test
 
 ## Future Roadmap
 
-- [ ] Persistent conversation history (SQLite via EF Core)
+- [x] Persistent conversation history (SQLite via EF Core)
 - [ ] Plugin discovery from NuGet packages at runtime
 - [ ] Multi-model routing (select model per tool category)
 - [ ] Web UI front-end (Blazor) backed by `HttpInputChannel`

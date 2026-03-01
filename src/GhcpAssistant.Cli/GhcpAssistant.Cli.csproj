@@ -5,6 +5,7 @@
     <ProjectReference Include="..\GhcpAssistant.Sdk\GhcpAssistant.Sdk.csproj" />
     <ProjectReference Include="..\GhcpAssistant.Tools\GhcpAssistant.Tools.csproj" />
     <ProjectReference Include="..\GhcpAssistant.Channels\GhcpAssistant.Channels.csproj" />
+    <ProjectReference Include="..\GhcpAssistant.Data\GhcpAssistant.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
