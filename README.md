@@ -24,6 +24,7 @@ dotnet test GhcpAssistant.sln
 | **git** | Run git operations: status, diff, log, commit. |
 | **web_search** | Search the web and return a summary of results (stub — configure a search provider to enable). |
 | **github** | Query the GitHub REST API: get repo info, list issues, list PRs. |
+| **home_assistant** | Interact with Home Assistant: get entity states, call services (e.g., turn on/off lights, locks, switches). Configure `HomeAssistant:BaseUrl` and `HomeAssistant:AccessToken` in `appsettings.json` to enable. |
 
 ## Persistent Conversation History
 

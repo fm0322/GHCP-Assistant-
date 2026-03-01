@@ -152,6 +152,7 @@ public sealed class ToolRegistry
 | `GitTool` | Run common `git` operations (status, diff, log, commit) |
 | `WebSearchTool` | Perform a web search and return a summary |
 | `GitHubTool` | Query GitHub REST API (issues, PRs, repos) via `Octokit.net` |
+| `HomeAssistantTool` | Interact with Home Assistant (entity states, service calls) via REST API |
 
 All tools implement `IAssistantTool`:
 
@@ -241,7 +242,8 @@ GHCP-Assistant/
 │   │   ├── ShellTool.cs
 │   │   ├── GitTool.cs
 │   │   ├── WebSearchTool.cs
-│   │   └── GitHubTool.cs
+│   │   ├── GitHubTool.cs
+│   │   └── HomeAssistantTool.cs
 │   │
 │   ├── GhcpAssistant.Channels/             # Input channel implementations
 │   │   ├── ConsoleInputChannel.cs
@@ -350,6 +352,7 @@ No other changes are needed — the SDK advertises the function to the model aut
 | Shell command execution | `ShellTool` runs in a sandboxed child process with a configurable allow-list of commands |
 | File system access | `FileSystemTool` is scoped to a configurable root directory; path traversal is validated |
 | Tool invocation | Only tools explicitly registered in `ToolRegistry` can be called by the agent |
+| Home Assistant access | `HomeAssistantTool` is only registered when a base URL is configured; long-lived access token should be stored in user secrets or environment variables |
 | Secrets in prompts | System prompt and user messages are never logged at `Information` level or above |
 | Conversation storage | Conversation history is stored locally in SQLite; no data is sent to external services |
 

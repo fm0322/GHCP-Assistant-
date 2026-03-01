@@ -15,6 +15,8 @@ var builder = Host.CreateApplicationBuilder(args);
 // Bind configuration
 var sessionOptions = builder.Configuration.GetSection("Session").Get<SessionOptions>() ?? new SessionOptions();
 var allowedCommands = builder.Configuration.GetSection("Shell:AllowedCommands").Get<string[]>() ?? ["dotnet", "git", "ls"];
+var haBaseUrl = builder.Configuration["HomeAssistant:BaseUrl"] ?? "";
+var haAccessToken = builder.Configuration["HomeAssistant:AccessToken"] ?? "";
 
 // Register services
 builder.Services.AddSingleton(sessionOptions);
@@ -27,6 +29,8 @@ builder.Services.AddSingleton(sp =>
     registry.Register(new GitTool(Directory.GetCurrentDirectory()));
     registry.Register(new WebSearchTool());
     registry.Register(new GitHubTool());
+    if (!string.IsNullOrWhiteSpace(haBaseUrl))
+        registry.Register(new HomeAssistantTool(new HttpClient(), haBaseUrl, haAccessToken));
     return registry;
 });
 
