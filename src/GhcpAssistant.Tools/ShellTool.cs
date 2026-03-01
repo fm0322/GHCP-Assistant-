@@ -42,7 +42,15 @@ public sealed class ShellTool : IAssistantTool
         var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
         var stderrTask = process.StandardError.ReadToEndAsync(ct);
 
-        await process.WaitForExitAsync(ct).WaitAsync(_timeout, ct);
+        try
+        {
+            await process.WaitForExitAsync(ct).WaitAsync(_timeout, ct);
+        }
+        catch (TimeoutException)
+        {
+            process.Kill(entireProcessTree: true);
+            throw new TimeoutException($"Command '{command}' exceeded the {_timeout.TotalSeconds}s timeout and was terminated.");
+        }
 
         var stdout = await stdoutTask;
         var stderr = await stderrTask;

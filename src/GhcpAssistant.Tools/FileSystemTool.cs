@@ -21,7 +21,7 @@ public sealed class FileSystemTool : IAssistantTool
         var path = parameters.GetProperty("path").GetString()!;
         var fullPath = Path.GetFullPath(Path.Combine(_rootDirectory, path));
 
-        if (!fullPath.StartsWith(_rootDirectory, StringComparison.OrdinalIgnoreCase))
+        if (!fullPath.StartsWith(_rootDirectory, StringComparison.Ordinal))
             throw new UnauthorizedAccessException("Path traversal detected.");
 
         return action.ToLowerInvariant() switch
@@ -39,6 +39,6 @@ public sealed class FileSystemTool : IAssistantTool
         var directory = Path.GetDirectoryName(fullPath);
         if (directory is not null) Directory.CreateDirectory(directory);
         await File.WriteAllTextAsync(fullPath, content, ct);
-        return $"Wrote {content.Length} characters to {fullPath}.";
+        return $"Wrote {content.Length} characters to {Path.GetFileName(fullPath)}.";
     }
 }

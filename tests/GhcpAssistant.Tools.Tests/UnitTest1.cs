@@ -42,6 +42,7 @@ public class FileSystemToolTests
         var result = await _tool.ExecuteAsync(parameters, CancellationToken.None);
 
         Assert.Contains("12 characters", result);
+        Assert.DoesNotContain(_testRoot, result);
         Assert.Equal("test content", await File.ReadAllTextAsync(Path.Combine(_testRoot, "output.txt")));
     }
 
