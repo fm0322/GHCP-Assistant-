@@ -6,6 +6,8 @@ namespace GhcpAssistant.Sdk;
 
 /// <summary>
 /// Maintains a dictionary of registered tools and dispatches invocations by name.
+/// Supports both static registration and dynamic registration of discovered tools
+/// (subject to approval via <see cref="IToolApprovalService"/>).
 /// </summary>
 public sealed class ToolRegistry
 {
@@ -18,6 +20,24 @@ public sealed class ToolRegistry
         if (!_tools.TryAdd(tool.Name, tool))
             throw new InvalidOperationException($"A tool named '{tool.Name}' is already registered.");
     }
+
+    /// <summary>
+    /// Attempt to register a dynamically discovered tool.
+    /// The tool is only registered if its approval status is <see cref="ToolApprovalStatus.Approved"/>.
+    /// Returns <c>true</c> if the tool was registered, <c>false</c> if it was not approved or already exists.
+    /// </summary>
+    public bool TryRegisterDiscovered(IAssistantTool tool, ToolApprovalStatus approvalStatus)
+    {
+        ArgumentNullException.ThrowIfNull(tool);
+
+        if (approvalStatus != ToolApprovalStatus.Approved)
+            return false;
+
+        return _tools.TryAdd(tool.Name, tool);
+    }
+
+    /// <summary>Check whether a tool with the given name is already registered.</summary>
+    public bool IsRegistered(string toolName) => _tools.ContainsKey(toolName);
 
     /// <summary>Return all registered tool metadata.</summary>
     public IReadOnlyList<IAssistantTool> GetRegisteredTools() => _tools.Values.ToList().AsReadOnly();

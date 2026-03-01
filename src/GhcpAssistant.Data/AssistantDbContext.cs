@@ -1,15 +1,18 @@
 using GhcpAssistant.Core.History;
 using GhcpAssistant.Core.Tasks;
+using GhcpAssistant.Core.Tools;
 using Microsoft.EntityFrameworkCore;
 
 namespace GhcpAssistant.Data;
 
-/// <summary>EF Core database context for conversation history and task persistence.</summary>
+/// <summary>EF Core database context for conversation history, task persistence, and tool configuration.</summary>
 public sealed class AssistantDbContext : DbContext
 {
     public DbSet<ConversationSession> Sessions => Set<ConversationSession>();
     public DbSet<ConversationMessage> Messages => Set<ConversationMessage>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
+    public DbSet<ToolConfiguration> ToolConfigurations => Set<ToolConfiguration>();
+    public DbSet<AssistantConfig> AssistantConfigs => Set<AssistantConfig>();
 
     public AssistantDbContext(DbContextOptions<AssistantDbContext> options) : base(options) { }
 
@@ -38,6 +41,21 @@ public sealed class AssistantDbContext : DbContext
             entity.Property(e => e.Title).IsRequired().HasMaxLength(256);
             entity.Property(e => e.Description).HasMaxLength(4096);
             entity.Property(e => e.Priority).HasConversion<string>().HasMaxLength(16);
+        });
+
+        modelBuilder.Entity<ToolConfiguration>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.Description).HasMaxLength(1024);
+            entity.Property(e => e.ToolTypeName).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.ApprovalStatus).HasConversion<string>().HasMaxLength(16);
+        });
+
+        modelBuilder.Entity<AssistantConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UpdatedByRole).HasMaxLength(32);
         });
     }
 }

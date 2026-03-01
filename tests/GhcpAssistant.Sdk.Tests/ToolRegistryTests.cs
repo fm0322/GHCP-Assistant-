@@ -67,4 +67,78 @@ public class ToolRegistryTests
         Assert.Throws<InvalidOperationException>(
             () => registry.Register(new FakeTool("dup_tool")));
     }
+
+    [Fact]
+    public void TryRegisterDiscovered_ApprovedTool_RegistersSuccessfully()
+    {
+        var registry = new ToolRegistry();
+        var tool = new FakeTool("discovered_tool");
+
+        var result = registry.TryRegisterDiscovered(tool, ToolApprovalStatus.Approved);
+
+        Assert.True(result);
+        Assert.True(registry.IsRegistered("discovered_tool"));
+    }
+
+    [Fact]
+    public void TryRegisterDiscovered_PendingTool_DoesNotRegister()
+    {
+        var registry = new ToolRegistry();
+        var tool = new FakeTool("pending_tool");
+
+        var result = registry.TryRegisterDiscovered(tool, ToolApprovalStatus.Pending);
+
+        Assert.False(result);
+        Assert.False(registry.IsRegistered("pending_tool"));
+    }
+
+    [Fact]
+    public void TryRegisterDiscovered_RejectedTool_DoesNotRegister()
+    {
+        var registry = new ToolRegistry();
+        var tool = new FakeTool("rejected_tool");
+
+        var result = registry.TryRegisterDiscovered(tool, ToolApprovalStatus.Rejected);
+
+        Assert.False(result);
+        Assert.False(registry.IsRegistered("rejected_tool"));
+    }
+
+    [Fact]
+    public void TryRegisterDiscovered_DuplicateApproved_ReturnsFalse()
+    {
+        var registry = new ToolRegistry();
+        registry.Register(new FakeTool("existing_tool"));
+
+        var result = registry.TryRegisterDiscovered(new FakeTool("existing_tool"), ToolApprovalStatus.Approved);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsRegistered_ExistingTool_ReturnsTrue()
+    {
+        var registry = new ToolRegistry();
+        registry.Register(new FakeTool("my_tool"));
+
+        Assert.True(registry.IsRegistered("my_tool"));
+    }
+
+    [Fact]
+    public void IsRegistered_NonExistingTool_ReturnsFalse()
+    {
+        var registry = new ToolRegistry();
+
+        Assert.False(registry.IsRegistered("nonexistent"));
+    }
+
+    [Fact]
+    public void IsRegistered_CaseInsensitive()
+    {
+        var registry = new ToolRegistry();
+        registry.Register(new FakeTool("My_Tool"));
+
+        Assert.True(registry.IsRegistered("MY_TOOL"));
+        Assert.True(registry.IsRegistered("my_tool"));
+    }
 }
