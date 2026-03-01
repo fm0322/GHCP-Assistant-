@@ -42,7 +42,8 @@ public class ToolRegistryTests
         var registry = new ToolRegistry();
         registry.Register(new FakeTool("my_tool", result: "hello world"));
 
-        var result = await registry.InvokeAsync("my_tool", JsonDocument.Parse("{}").RootElement);
+        using var doc = JsonDocument.Parse("{}");
+        var result = await registry.InvokeAsync("my_tool", doc.RootElement);
 
         Assert.Equal("hello world", result);
     }
@@ -52,8 +53,9 @@ public class ToolRegistryTests
     {
         var registry = new ToolRegistry();
 
+        using var doc = JsonDocument.Parse("{}");
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => registry.InvokeAsync("nonexistent", JsonDocument.Parse("{}").RootElement));
+            () => registry.InvokeAsync("nonexistent", doc.RootElement));
     }
 
     [Fact]
