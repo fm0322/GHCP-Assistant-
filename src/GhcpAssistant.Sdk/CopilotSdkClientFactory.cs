@@ -102,7 +102,7 @@ internal sealed class SdkSessionWrapper : ICopilotSessionWrapper
                 channel.Writer.TryComplete(t.Exception!.InnerException ?? t.Exception);
             else if (t.IsCanceled)
                 channel.Writer.TryComplete(new OperationCanceledException());
-        }, TaskContinuationOptions.NotOnRanToCompletion);
+        }, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
 
         await foreach (var evt in channel.Reader.ReadAllAsync(ct))
             yield return evt;
